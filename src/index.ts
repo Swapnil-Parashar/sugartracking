@@ -243,90 +243,102 @@ const server = serve({
     }
 
     if (url.pathname === "/api/login" && method === "POST") {
-      const formData = await req.formData();
-      const username = formData.get("username") as string;
-      const password = formData.get("password") as string;
+      try {
+        const body = await req.json();
+        const username = body.username;
+        const password = body.password;
 
-      const user = await getUserByUsername(username);
-      if (user && (await bcrypt.compare(password, user.password))) {
-        const sessionId = Math.random().toString(36).substring(2);
-        sessions.set(sessionId, { userId: user.id, username: user.username });
+        const user = await getUserByUsername(username);
+        if (user && (await bcrypt.compare(password, user.password))) {
+          const sessionId = Math.random().toString(36).substring(2);
+          sessions.set(sessionId, { userId: user.id, username: user.username });
 
-        return new Response(
-          JSON.stringify({
-            sessionId,
-            user: { userId: user.id, username: user.username },
-          }),
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+          return new Response(
+            JSON.stringify({
+              sessionId,
+              user: { userId: user.id, username: user.username },
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        return new Response("Invalid credentials", { status: 401 });
+      } catch (error) {
+        return new Response("Invalid request body", { status: 400 });
       }
-
-      return new Response("Invalid credentials", { status: 401 });
     }
 
     if (url.pathname === "/api/signup" && method === "POST") {
-      const formData = await req.formData();
-      const userData = {
-        username: formData.get("username") as string,
-        password: formData.get("password") as string,
-        name: formData.get("name") as string,
-        age: formData.get("age") as string,
-        gender: formData.get("gender") as string,
-      };
+      try {
+        const body = await req.json();
+        const userData = {
+          username: body.username,
+          password: body.password,
+          name: body.name,
+          age: body.age,
+          gender: body.gender,
+        };
 
-      const existingUser = await getUserByUsername(userData.username);
-      if (existingUser) {
-        return new Response("Username already exists", { status: 400 });
+        const existingUser = await getUserByUsername(userData.username);
+        if (existingUser) {
+          return new Response("Username already exists", { status: 400 });
+        }
+
+        const newUser = await createUser(userData);
+        if (newUser) {
+          const sessionId = Math.random().toString(36).substring(2);
+          sessions.set(sessionId, {
+            userId: newUser.id,
+            username: newUser.username,
+          });
+
+          return new Response(
+            JSON.stringify({
+              sessionId,
+              user: { userId: newUser.id, username: newUser.username },
+            }),
+            {
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        return new Response("Failed to create account", { status: 500 });
+      } catch (error) {
+        return new Response("Invalid request body", { status: 400 });
       }
-
-      const newUser = await createUser(userData);
-      if (newUser) {
-        const sessionId = Math.random().toString(36).substring(2);
-        sessions.set(sessionId, {
-          userId: newUser.id,
-          username: newUser.username,
-        });
-
-        return new Response(
-          JSON.stringify({
-            sessionId,
-            user: { userId: newUser.id, username: newUser.username },
-          }),
-          {
-            headers: { "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      return new Response("Failed to create account", { status: 500 });
     }
 
     if (url.pathname === "/api/readings" && method === "POST") {
-      const formData = await req.formData();
-      const sessionId = formData.get("session") as string;
+      try {
+        const body = await req.json();
+        const sessionId = body.session;
 
-      if (!sessionId || !sessions.has(sessionId)) {
-        return new Response("Unauthorized", { status: 401 });
+        if (!sessionId || !sessions.has(sessionId)) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const session = sessions.get(sessionId)!;
+        const reading = {
+          date: body.date,
+          time: body.time,
+          type: body.type,
+          value: body.value,
+        };
+
+        const success = await addSugarReading(session.userId, reading);
+        if (success) {
+          return new Response(JSON.stringify({ success: true }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+
+        return new Response("Failed to add reading", { status: 500 });
+      } catch (error) {
+        return new Response("Invalid request body", { status: 400 });
       }
-
-      const session = sessions.get(sessionId)!;
-      const reading = {
-        date: formData.get("date") as string,
-        time: formData.get("time") as string,
-        type: formData.get("type") as string,
-        value: parseFloat(formData.get("value") as string),
-      };
-
-      const success = await addSugarReading(session.userId, reading);
-      if (success) {
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response("Failed to add reading", { status: 500 });
     }
 
     if (url.pathname === "/api/logout" && method === "POST") {
