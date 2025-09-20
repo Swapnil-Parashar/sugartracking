@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sugar Tracking - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card h2 {
+            margin-bottom: 1rem;
+            color: #333;
+            font-size: 1.2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .readings-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .reading-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .reading-item:last-child {
+            border-bottom: none;
+        }
+
+        .reading-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .reading-date {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .reading-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .reading-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .type-badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+        }
+
+        .type-fasting {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .type-evening {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .type-night {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                flex-direction: column;
+            }
+
+            .header {
+                padding: 1rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>🍯 Sugar Tracker Dashboard</h1>
+        <div class="user-info">
+            <span>Welcome, <%= user.username %>!</span>
+            <button class="btn btn-secondary" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="totalReadings">
+                    <%= readings.length %>
+                </div>
+                <div class="stat-label">Total Readings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="avgReading">-</div>
+                <div class="stat-label">Average Level</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastReading">-</div>
+                <div class="stat-label">Last Reading</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="daysTracked">-</div>
+                <div class="stat-label">Days Tracked</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Add Reading Form -->
+            <div class="card">
+                <h2>Add New Reading</h2>
+                <form id="readingForm" method="POST" action="/add-reading">
+                    <input type="hidden" name="session" value="<%= typeof session !== 'undefined' ? session : '' %>">
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date">Date</label>
+                            <input type="date" id="date" name="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="time">Time</label>
+                            <input type="time" id="time" name="time" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="type">Reading Type</label>
+                            <select id="type" name="type" required>
+                                <option value="">Select Type</option>
+                                <option value="fasting">Fasting</option>
+                                <option value="evening">Evening</option>
+                                <option value="night">Night</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="value">Sugar Level (mg/dL)</label>
+                            <input type="number" id="value" name="value" min="50" max="500" step="0.1" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn">Add Reading</button>
+                </form>
+            </div>
+
+            <!-- Recent Readings -->
+            <div class="card">
+                <h2>Recent Readings</h2>
+                <div class="readings-list">
+                    <% if (readings.length===0) { %>
+                        <p style="text-align: center; color: #666; padding: 2rem;">No readings yet. Add your first
+                            reading!</p>
+                        <% } else { %>
+                            <% readings.slice(-5).reverse().forEach(reading=> { %>
+                                <div class="reading-item">
+                                    <div class="reading-info">
+                                        <div class="reading-date">
+                                            <%= reading.date %>
+                                        </div>
+                                        <div class="reading-details">
+                                            <%= reading.time %> •
+                                                <span class="type-badge type-<%= reading.type %>">
+                                                    <%= reading.type %>
+                                                </span>
+                                        </div>
+                                    </div>
+                                    <div class="reading-value">
+                                        <%= reading.value %> mg/dL
+                                    </div>
+                                </div>
+                                <% }); %>
+                                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart -->
+        <div class="card">
+            <h2>Sugar Level Trends</h2>
+            <div class="chart-container">
+                <canvas id="sugarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Set default date and time
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        document.getElementById('time').value = new Date().toTimeString().slice(0, 5);
+
+        // Calculate and display stats
+        const readings = <% - JSON.stringify(readings) %>;
+        console.log("Readings data:", readings);
+
+        function updateStats() {
+            if (readings.length === 0) return;
+
+            // Average reading
+            const avg = readings.reduce((sum, r) => sum + r.value, 0) / readings.length;
+            document.getElementById('avgReading').textContent = avg.toFixed(1);
+
+            // Last reading
+            const lastReading = readings[readings.length - 1];
+            document.getElementById('lastReading').textContent = lastReading.value;
+
+            // Days tracked
+            const uniqueDays = new Set(readings.map(r => r.date)).size;
+            document.getElementById('daysTracked').textContent = uniqueDays;
+        }
+
+        // Create chart
+        function createChart() {
+            const ctx = document.getElementById('sugarChart').getContext('2d');
+
+            // Group readings by type
+            const fastingData = readings.filter(r => r.type === 'fasting');
+            const eveningData = readings.filter(r => r.type === 'evening');
+            const nightData = readings.filter(r => r.type === 'night');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Fasting',
+                            data: fastingData.map(r => ({
+                                x: new Date(r.date + 'T' + r.time),
+                                y: r.value
+                            })),
+                            borderColor: '#1976d2',
+                            backgroundColor: 'rgba(25, 118, 210, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Evening',
+                            data: eveningData.map(r => ({
+                                x: new Date(r.date + 'T' + r.time),
+                                y: r.value
+                            })),
+                            borderColor: '#f57c00',
+                            backgroundColor: 'rgba(245, 124, 0, 0.1)',
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Night',
+                            data: nightData.map(r => ({
+                                x: new Date(r.date + 'T' + r.time),
+                                y: r.value
+                            })),
+                            borderColor: '#7b1fa2',
+                            backgroundColor: 'rgba(123, 31, 162, 0.1)',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'day'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Sugar Level (mg/dL)'
+                            },
+                            min: 0
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function (context) {
+                                    return new Date(context[0].parsed.x).toLocaleDateString();
+                                },
+                                label: function (context) {
+                                    return context.dataset.label + ': ' + context.parsed.y + ' mg/dL';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = '/';
+            }
+        }
+
+        // Initialize
+        updateStats();
+        if (readings.length > 0) {
+            createChart();
+        }
+    </script>
+</body>
+
+</html>
