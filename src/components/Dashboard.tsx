@@ -90,13 +90,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     queryKey: ["user"],
     queryFn: async () => {
       const sessionToken = getSessionToken();
-      __DEV__ &&
+      process.env.NODE_ENV === "development" &&
         console.log("Dashboard - fetching user with token:", sessionToken);
       if (!sessionToken) {
         throw new Error("No session token available");
       }
       const response = await fetch(`/api/user${sessionToken}`);
-      __DEV__ &&
+      process.env.NODE_ENV === "development" &&
         console.log(
           "Dashboard - user API response:",
           response.status,
@@ -126,13 +126,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     queryKey: ["readings"],
     queryFn: async () => {
       const sessionToken = getSessionToken();
-      __DEV__ &&
+      process.env.NODE_ENV === "development" &&
         console.log("Dashboard - fetching readings with token:", sessionToken);
       if (!sessionToken) {
         throw new Error("No session token available");
       }
       const response = await fetch(`/api/readings${sessionToken}`);
-      __DEV__ &&
+      process.env.NODE_ENV === "development" &&
         console.log(
           "Dashboard - readings API response:",
           response.status,
@@ -149,19 +149,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   // Add reading mutation
   const addReadingMutation = useMutation({
     mutationFn: async (data: ReadingFormData) => {
-      const formData = new FormData();
-      formData.append("date", data.date);
-      formData.append("time", data.time);
-      formData.append("type", data.type);
-      formData.append("value", data.value.toString());
-      formData.append("session", localStorage.getItem("sessionId") || "");
-
       const response = await fetch("/api/readings", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          date: data.date,
+          time: data.time,
+          type: data.type,
+          value: data.value,
+          session: localStorage.getItem("sessionId") || "",
+        }),
       });
 
-      if (!response.ok) throw new Error("Failed to add reading");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to add reading");
+      }
       return await response.json();
     },
     onSuccess: () => {

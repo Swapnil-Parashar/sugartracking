@@ -33,13 +33,13 @@ const App: React.FC = () => {
     console.log("Session ID found, checking user...");
     fetch(`/api/user?session=${sessionId}`)
       .then((response) => {
-        __DEV__ &&
+        process.env.NODE_ENV === "development" &&
           console.log("User API response:", response.status, response.ok);
         if (response.ok) {
           console.log("User authenticated, showing dashboard");
           setCurrentPage("dashboard");
         } else {
-          __DEV__ &&
+          process.env.NODE_ENV === "development" &&
             console.log(
               "User not authenticated, clearing session and showing login"
             );

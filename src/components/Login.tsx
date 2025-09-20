@@ -35,18 +35,20 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginFormData) => {
-      const formData = new FormData();
-      formData.append("username", data.username);
-      formData.append("password", data.password);
-
       const response = await fetch("/api/login", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+        }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Login failed");
       }
 
       return response.json();
@@ -64,21 +66,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupFormData) => {
-      const formData = new FormData();
-      formData.append("username", data.username);
-      formData.append("password", data.password);
-      formData.append("name", data.name);
-      formData.append("age", data.age);
-      formData.append("gender", data.gender);
-
       const response = await fetch("/api/signup", {
         method: "POST",
-        body: formData,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: data.username,
+          password: data.password,
+          name: data.name,
+          age: data.age,
+          gender: data.gender,
+        }),
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Signup failed");
       }
 
       return response.json();
