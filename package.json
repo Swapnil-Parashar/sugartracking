@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "start": "bun run src/index.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun",
-    "vercel-build": "bun run build"
+    "build": "bun run build.ts",
+    "vercel-build": "bun run build.ts"
   },
   "dependencies": {
     "bun-types": "latest",
