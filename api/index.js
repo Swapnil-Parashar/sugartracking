@@ -28,10 +28,10 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: "v4", auth });
 
 // In-memory session storage (in production, use Redis or database)
-const sessions = new Map<string, { userId: string; username: string }>();
+const sessions = new Map();
 
 // Helper functions for Google Sheets operations
-async function getUserByUsername(username: string) {
+async function getUserByUsername(username) {
   try {
     console.log("Attempting to get user:", username);
     console.log("Using SHEETS_ID:", SHEETS_ID);
@@ -41,7 +41,7 @@ async function getUserByUsername(username: string) {
     });
 
     const rows = response.data.values || [];
-    const userRow = rows.find((row: any[]) => row[1] === username);
+    const userRow = rows.find((row) => row[1] === username);
 
     if (userRow) {
       return {
@@ -60,7 +60,7 @@ async function getUserByUsername(username: string) {
   }
 }
 
-async function createUser(userData: any) {
+async function createUser(userData) {
   try {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const userId = Date.now().toString();
@@ -90,7 +90,7 @@ async function createUser(userData: any) {
   }
 }
 
-async function addSugarReading(userId: string, reading: any) {
+async function addSugarReading(userId, reading) {
   try {
     await sheets.spreadsheets.values.append({
       spreadsheetId: SHEETS_ID,
@@ -109,7 +109,7 @@ async function addSugarReading(userId: string, reading: any) {
   }
 }
 
-async function getSugarReadings(userId: string) {
+async function getSugarReadings(userId) {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEETS_ID,
@@ -118,8 +118,8 @@ async function getSugarReadings(userId: string) {
 
     const rows = response.data.values || [];
     return rows
-      .filter((row: any[]) => row[0] === userId)
-      .map((row: any[]) => ({
+      .filter((row) => row[0] === userId)
+      .map((row) => ({
         date: row[1],
         time: row[2],
         type: row[3],
@@ -131,15 +131,29 @@ async function getSugarReadings(userId: string) {
   }
 }
 
-export default async function handler(req: any, res: any) {
-  // Enable CORS
-  res.setHeader("Access-Control-Allow-Origin", "*");
+// Helper function to set CORS headers
+function setCorsHeaders(res) {
+  // Allow only your specific domain
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    "https://sugartracking.vercel.app"
+  );
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, OPTIONS"
   );
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Requested-With"
+  );
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+}
 
+export default async function handler(req, res) {
+  // Set CORS headers for all requests
+  setCorsHeaders(res);
+
+  // Handle preflight requests
   if (req.method === "OPTIONS") {
     res.status(200).end();
     return;
@@ -156,7 +170,7 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const session = sessions.get(sessionId)!;
+      const session = sessions.get(sessionId);
       return res.status(200).json(session);
     }
 
@@ -166,7 +180,7 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const session = sessions.get(sessionId)!;
+      const session = sessions.get(sessionId);
       const readings = await getSugarReadings(session.userId);
       return res.status(200).json(readings);
     }
@@ -226,7 +240,7 @@ export default async function handler(req: any, res: any) {
         return res.status(401).json({ error: "Unauthorized" });
       }
 
-      const sessionData = sessions.get(session)!;
+      const sessionData = sessions.get(session);
       const reading = { date, time, type, value };
 
       const success = await addSugarReading(sessionData.userId, reading);
