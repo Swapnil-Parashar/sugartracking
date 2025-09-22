@@ -33,18 +33,25 @@ async function buildFrontend() {
     // Copy public directory
     await mkdir("dist/public", { recursive: true });
     await copyFile("public/index.html", "dist/public/index.html");
-    
+
     // Copy CSS files
     await mkdir("dist/styles", { recursive: true });
     await copyFile("styles/globals.css", "dist/styles/globals.css");
-    
+
     // Copy src/index.css to dist/src
     await copyFile("src/index.css", "dist/src/index.css");
-    
+
+    // Copy component CSS files
+    await mkdir("dist/src/components", { recursive: true });
+    await copyFile(
+      "src/components/Dashboard.css",
+      "dist/src/components/Dashboard.css"
+    );
+
     // Copy API file
     await mkdir("dist/api", { recursive: true });
     await copyFile("api/index.js", "dist/api/index.js");
-    
+
     console.log("Static files copied successfully");
   } catch (error) {
     console.error("Error copying static files:", error);

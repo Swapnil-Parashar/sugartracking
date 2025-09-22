@@ -51,6 +51,7 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [dateFilter, setDateFilter] = useState<string>("all");
 
   // Helper function to get session token
   const getSessionToken = () => {
@@ -75,6 +76,39 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       default:
         return getCurrentTime();
     }
+  };
+
+  // Helper function to filter readings based on date filter
+  const getFilteredReadings = (allReadings: Reading[]) => {
+    if (dateFilter === "all") return allReadings;
+
+    const now = new Date();
+    const filterDate = new Date();
+
+    switch (dateFilter) {
+      case "7":
+        filterDate.setDate(now.getDate() - 7);
+        break;
+      case "10":
+        filterDate.setDate(now.getDate() - 10);
+        break;
+      case "20":
+        filterDate.setDate(now.getDate() - 20);
+        break;
+      case "30":
+        filterDate.setDate(now.getDate() - 30);
+        break;
+      case "90":
+        filterDate.setDate(now.getDate() - 90);
+        break;
+      default:
+        return allReadings;
+    }
+
+    return allReadings.filter((reading) => {
+      const readingDate = new Date(reading.date);
+      return readingDate >= filterDate;
+    });
   };
   const [readingForm, setReadingForm] = useState<ReadingFormData>({
     date: new Date().toISOString().split("T")[0] || "",
@@ -197,26 +231,32 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
     }
   };
 
-  // Calculate statistics
+  // Get filtered readings
+  const filteredReadings = getFilteredReadings(readings);
+
+  // Calculate statistics based on filtered readings
   const stats = {
-    totalReadings: readings.length,
+    totalReadings: filteredReadings.length,
     averageLevel:
-      readings.length > 0
+      filteredReadings.length > 0
         ? (
-            readings.reduce((sum, r) => sum + r.value, 0) / readings.length
+            filteredReadings.reduce((sum, r) => sum + r.value, 0) /
+            filteredReadings.length
           ).toFixed(1)
         : "-",
     lastReading:
-      readings.length > 0 ? readings[readings.length - 1]?.value || "-" : "-",
-    daysTracked: new Set(readings.map((r) => r.date)).size,
+      filteredReadings.length > 0
+        ? filteredReadings[filteredReadings.length - 1]?.value || "-"
+        : "-",
+    daysTracked: new Set(filteredReadings.map((r) => r.date)).size,
   };
 
-  // Prepare chart data with better time handling
+  // Prepare chart data with better time handling using filtered readings
   const chartData = {
     datasets: [
       {
         label: "Fasting",
-        data: readings
+        data: filteredReadings
           .filter((r) => r.type === "fasting")
           .map((r) => ({
             x: new Date(r.date + "T" + (r.time || "08:00")),
@@ -231,7 +271,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       },
       {
         label: "Evening",
-        data: readings
+        data: filteredReadings
           .filter((r) => r.type === "evening")
           .map((r) => ({
             x: new Date(r.date + "T" + (r.time || "18:00")),
@@ -246,7 +286,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       },
       {
         label: "Night",
-        data: readings
+        data: filteredReadings
           .filter((r) => r.type === "night")
           .map((r) => ({
             x: new Date(r.date + "T" + (r.time || "22:00")),
@@ -367,167 +407,42 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          color: "white",
-          padding: "1rem 2rem",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        }}
-      >
-        <h1 style={{ fontSize: "1.5rem" }}>🍯 Sugar Tracker Dashboard</h1>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <span>
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">🍯 Sugar Tracker Dashboard</h1>
+        <div className="dashboard-user-info">
+          <span className="dashboard-welcome">
             Welcome, {user?.username || userData?.username || "User"}!
           </span>
-          <button
-            onClick={handleLogout}
-            style={{
-              background: "#6c757d",
-              color: "white",
-              border: "none",
-              padding: "0.75rem 1.5rem",
-              borderRadius: "8px",
-              fontSize: "1rem",
-              fontWeight: "600",
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={handleLogout} className="dashboard-logout-btn">
             Logout
           </button>
         </div>
       </div>
 
-      <div
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "2rem",
-        }}
-      >
+      <div className="dashboard-container">
         {/* Stats Cards */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1rem",
-            marginBottom: "2rem",
-          }}
-        >
-          <div
-            style={{
-              background: "white",
-              borderRadius: "15px",
-              padding: "1.5rem",
-              textAlign: "center",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "2rem",
-                fontWeight: "bold",
-                color: "#667eea",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {stats.totalReadings}
-            </div>
-            <div style={{ color: "#666", fontSize: "0.9rem" }}>
-              Total Readings
-            </div>
+        <div className="dashboard-stats-grid">
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-value">{stats.totalReadings}</div>
+            <div className="dashboard-stat-label">Total Readings</div>
           </div>
-          <div
-            style={{
-              background: "white",
-              borderRadius: "15px",
-              padding: "1.5rem",
-              textAlign: "center",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "2rem",
-                fontWeight: "bold",
-                color: "#667eea",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {stats.averageLevel}
-            </div>
-            <div style={{ color: "#666", fontSize: "0.9rem" }}>
-              Average Level
-            </div>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-value">{stats.averageLevel}</div>
+            <div className="dashboard-stat-label">Average Level</div>
           </div>
-          <div
-            style={{
-              background: "white",
-              borderRadius: "15px",
-              padding: "1.5rem",
-              textAlign: "center",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "2rem",
-                fontWeight: "bold",
-                color: "#667eea",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {stats.lastReading}
-            </div>
-            <div style={{ color: "#666", fontSize: "0.9rem" }}>
-              Last Reading
-            </div>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-value">{stats.lastReading}</div>
+            <div className="dashboard-stat-label">Last Reading</div>
           </div>
-          <div
-            style={{
-              background: "white",
-              borderRadius: "15px",
-              padding: "1.5rem",
-              textAlign: "center",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-            }}
-          >
-            <div
-              style={{
-                fontSize: "2rem",
-                fontWeight: "bold",
-                color: "#667eea",
-                marginBottom: "0.5rem",
-              }}
-            >
-              {stats.daysTracked}
-            </div>
-            <div style={{ color: "#666", fontSize: "0.9rem" }}>
-              Days Tracked
-            </div>
+          <div className="dashboard-stat-card">
+            <div className="dashboard-stat-value">{stats.daysTracked}</div>
+            <div className="dashboard-stat-label">Days Tracked</div>
           </div>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "2rem",
-            marginBottom: "2rem",
-          }}
-        >
+        <div className="dashboard-main-grid">
           {/* Add Reading Form */}
-          <div
-            style={{
-              background: "white",
-              borderRadius: "15px",
-              padding: "1.5rem",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-            }}
-          >
+          <div className="dashboard-card">
             <h2
               style={{
                 marginBottom: "1rem",
@@ -538,9 +453,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               Add New Reading
             </h2>
             <form onSubmit={handleSubmit}>
-              <div
-                style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}
-              >
+              <div className="dashboard-form-row">
                 <div style={{ flex: 1 }}>
                   <label
                     style={{
@@ -559,14 +472,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       setReadingForm({ ...readingForm, date: e.target.value })
                     }
                     required
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "2px solid #e1e5e9",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box",
-                    }}
+                    className="dashboard-form-input"
                   />
                 </div>
                 <div style={{ flex: 1 }}>
@@ -587,14 +493,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       setReadingForm({ ...readingForm, time: e.target.value })
                     }
                     placeholder="Auto-set based on type"
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "2px solid #e1e5e9",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box",
-                    }}
+                    className="dashboard-form-input"
                   />
                   <small
                     style={{
@@ -609,9 +508,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   </small>
                 </div>
               </div>
-              <div
-                style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}
-              >
+              <div className="dashboard-form-row">
                 <div style={{ flex: 1 }}>
                   <label
                     style={{
@@ -629,14 +526,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                       setReadingForm({ ...readingForm, type: e.target.value })
                     }
                     required
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "2px solid #e1e5e9",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box",
-                    }}
+                    className="dashboard-form-input"
                   >
                     <option value="">Select Type</option>
                     <option value="fasting">Fasting</option>
@@ -668,35 +558,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     max="500"
                     step="0.1"
                     required
-                    style={{
-                      width: "100%",
-                      padding: "0.75rem",
-                      border: "2px solid #e1e5e9",
-                      borderRadius: "8px",
-                      fontSize: "1rem",
-                      boxSizing: "border-box",
-                    }}
+                    className="dashboard-form-input"
                   />
                 </div>
               </div>
               <button
                 type="submit"
                 disabled={addReadingMutation.isPending}
-                style={{
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
-                  border: "none",
-                  padding: "0.75rem 1.5rem",
-                  borderRadius: "8px",
-                  fontSize: "1rem",
-                  fontWeight: "600",
-                  cursor: addReadingMutation.isPending
-                    ? "not-allowed"
-                    : "pointer",
-                  opacity: addReadingMutation.isPending ? 0.7 : 1,
-                  width: "100%",
-                }}
+                className="dashboard-btn"
               >
                 {addReadingMutation.isPending ? "Adding..." : "Add Reading"}
               </button>
@@ -704,14 +573,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
           </div>
 
           {/* Recent Readings */}
-          <div
-            style={{
-              background: "white",
-              borderRadius: "15px",
-              padding: "1.5rem",
-              boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-            }}
-          >
+          <div className="dashboard-card">
             <h2
               style={{
                 marginBottom: "1rem",
@@ -722,7 +584,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
               Recent Readings
             </h2>
             <div style={{ maxHeight: "300px", overflowY: "auto" }}>
-              {readings.length === 0 ? (
+              {filteredReadings.length === 0 ? (
                 <p
                   style={{
                     textAlign: "center",
@@ -730,10 +592,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                     padding: "2rem",
                   }}
                 >
-                  No readings yet. Add your first reading!
+                  {readings.length === 0
+                    ? "No readings yet. Add your first reading!"
+                    : `No readings found for the selected time period.`}
                 </p>
               ) : (
-                readings
+                filteredReadings
                   .slice(-5)
                   .reverse()
                   .map((reading, index) => (
@@ -808,25 +672,50 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         </div>
 
         {/* Chart */}
-        <div
-          style={{
-            background: "white",
-            borderRadius: "15px",
-            padding: "1.5rem",
-            boxShadow: "0 5px 15px rgba(0,0,0,0.08)",
-          }}
-        >
-          <h2
-            style={{
-              marginBottom: "1rem",
-              color: "#333",
-              fontSize: "1.2rem",
-            }}
-          >
-            Sugar Level Trends
-          </h2>
+        <div className="dashboard-card">
+          <div className="dashboard-chart-header">
+            <h2
+              style={{
+                color: "#333",
+                fontSize: "1.2rem",
+                margin: 0,
+              }}
+            >
+              Sugar Level Trends
+            </h2>
+            <div className="dashboard-filter-buttons">
+              {[
+                { value: "all", label: "All Time" },
+                { value: "7", label: "7 Days" },
+                { value: "10", label: "10 Days" },
+                { value: "20", label: "20 Days" },
+                { value: "30", label: "30 Days" },
+                { value: "90", label: "3 Months" },
+              ].map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setDateFilter(filter.value)}
+                  style={{
+                    padding: "0.5rem 1rem",
+                    border: "2px solid #e1e5e9",
+                    borderRadius: "20px",
+                    background:
+                      dateFilter === filter.value ? "#667eea" : "white",
+                    color: dateFilter === filter.value ? "white" : "#666",
+                    fontSize: "0.8rem",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    transition: "all 0.2s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
           <div style={{ position: "relative", height: "400px" }}>
-            {readings.length > 0 ? (
+            {filteredReadings.length > 0 ? (
               <Line data={chartData} options={chartOptions} />
             ) : (
               <div
@@ -836,9 +725,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
                   alignItems: "center",
                   height: "100%",
                   color: "#666",
+                  textAlign: "center",
+                  padding: "2rem",
                 }}
               >
-                No data to display. Add some readings to see the chart!
+                {readings.length === 0
+                  ? "No data to display. Add some readings to see the chart!"
+                  : `No readings found for the selected time period (${
+                      dateFilter === "all"
+                        ? "All Time"
+                        : `Last ${dateFilter} days`
+                    }).`}
               </div>
             )}
           </div>
