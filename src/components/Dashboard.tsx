@@ -104,7 +104,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         );
       if (!response.ok) throw new Error("Failed to fetch user");
       const data = await response.json();
-      console.log("Dashboard - user data:", data);
       return data;
     },
     enabled: !!localStorage.getItem("sessionId"),
@@ -140,7 +139,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         );
       if (!response.ok) throw new Error("Failed to fetch readings");
       const data = await response.json();
-      console.log("Dashboard - readings data:", data);
       return data;
     },
     enabled: !!localStorage.getItem("sessionId"),

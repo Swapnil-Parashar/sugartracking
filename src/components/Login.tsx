@@ -54,9 +54,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log("Login successful, data:", data);
       localStorage.setItem("sessionId", data.sessionId);
-      console.log("Session ID stored:", data.sessionId);
       onLoginSuccess();
     },
     onError: (error: Error) => {
@@ -88,9 +86,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       return response.json();
     },
     onSuccess: (data) => {
-      console.log("Signup successful, data:", data);
       localStorage.setItem("sessionId", data.sessionId);
-      console.log("Session ID stored:", data.sessionId);
       onLoginSuccess();
     },
     onError: (error: Error) => {

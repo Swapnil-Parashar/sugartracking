@@ -22,15 +22,12 @@ const App: React.FC = () => {
   React.useEffect(() => {
     // Check if user is already logged in
     const sessionId = localStorage.getItem("sessionId");
-    console.log("App useEffect - sessionId:", sessionId);
 
     if (!sessionId) {
-      console.log("No session ID found, showing login");
       setCurrentPage("login");
       return;
     }
 
-    console.log("Session ID found, checking user...");
     fetch(`/api/user?session=${sessionId}`)
       .then((response) => {
         process.env.NODE_ENV === "development" &&

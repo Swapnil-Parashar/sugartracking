@@ -33,8 +33,6 @@ const sessions = new Map<string, { userId: string; username: string }>();
 // Helper functions for Google Sheets operations
 async function getUserByUsername(username: string) {
   try {
-    console.log("Attempting to get user:", username);
-    console.log("Using SHEETS_ID:", SHEETS_ID);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEETS_ID,
       range: "Users!A:F",

@@ -33,8 +33,6 @@ const sessions = new Map();
 // Helper functions for Google Sheets operations
 async function getUserByUsername(username) {
   try {
-    console.log("Attempting to get user:", username);
-    console.log("Using SHEETS_ID:", SHEETS_ID);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEETS_ID,
       range: "Users!A:F",
@@ -132,12 +130,28 @@ async function getSugarReadings(userId) {
 }
 
 // Helper function to set CORS headers
-function setCorsHeaders(res) {
-  // Allow only your specific domain
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "https://sugartracking.vercel.app"
-  );
+function setCorsHeaders(req, res) {
+  // Get the origin from the request
+  const origin = req.headers.origin;
+
+  // Define allowed origins
+  const allowedOrigins = [
+    "https://sugartracking.vercel.app",
+    "http://localhost:3000",
+    "https://localhost:3000",
+  ];
+
+  // Check if the origin is allowed
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  } else {
+    // Default to production domain if origin is not in allowed list
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      "https://sugartracking.vercel.app"
+    );
+  }
+
   res.setHeader(
     "Access-Control-Allow-Methods",
     "GET, POST, PUT, DELETE, OPTIONS"
@@ -151,7 +165,7 @@ function setCorsHeaders(res) {
 
 export default async function handler(req, res) {
   // Set CORS headers for all requests
-  setCorsHeaders(res);
+  setCorsHeaders(req, res);
 
   // Handle preflight requests
   if (req.method === "OPTIONS") {

@@ -32,11 +32,35 @@ const sheets = google.sheets({ version: "v4", auth });
 // In-memory session storage (in production, use Redis or database)
 const sessions = new Map<string, { userId: string; username: string }>();
 
+// Helper function to set CORS headers
+function setCorsHeaders(req: Request): HeadersInit {
+  const origin = req.headers.get("origin");
+
+  // Define allowed origins
+  const allowedOrigins = [
+    "https://sugartracking.vercel.app",
+    "http://localhost:3000",
+    "https://localhost:3000",
+  ];
+
+  // Check if the origin is allowed
+  const allowedOrigin = allowedOrigins.includes(origin || "")
+    ? origin
+    : "https://sugartracking.vercel.app";
+
+  return {
+    "Access-Control-Allow-Origin":
+      allowedOrigin || "https://sugartracking.vercel.app",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Requested-With",
+    "Access-Control-Allow-Credentials": "true",
+  };
+}
+
 // Helper functions for Google Sheets operations
 async function getUserByUsername(username: string) {
   try {
-    console.log("Attempting to get user:", username);
-    console.log("Using SHEETS_ID:", SHEETS_ID);
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SHEETS_ID,
       range: "Users!A:F",
@@ -135,16 +159,20 @@ async function getSugarReadings(userId: string) {
 
 // Server setup
 const PORT = process.env.PORT || 3000;
-console.log("Environment variables loaded:");
-console.log("PORT:", PORT);
-console.log("GOOGLE_SHEETS_ID:", process.env.GOOGLE_SHEETS_ID);
-console.log("GOOGLE_CLIENT_EMAIL:", process.env.GOOGLE_CLIENT_EMAIL);
 
 const server = serve({
   port: parseInt(PORT as string),
   async fetch(req) {
     const url = new URL(req.url);
     const method = req.method;
+
+    // Handle CORS preflight requests
+    if (method === "OPTIONS") {
+      return new Response(null, {
+        status: 200,
+        headers: setCorsHeaders(req),
+      });
+    }
 
     // Serve static files
     if (
@@ -159,39 +187,29 @@ const server = serve({
       return new Response("File not found", { status: 404 });
     }
 
-    // Handle TypeScript/JSX files for the frontend
+    // Handle built frontend files from dist directory
     if (url.pathname.startsWith("/src/")) {
-      const filePath = path.join(process.cwd(), url.pathname.slice(1));
-      const file = Bun.file(filePath);
+      const distFilePath = path.join(
+        process.cwd(),
+        "dist",
+        url.pathname.slice(1)
+      );
+      const file = Bun.file(distFilePath);
 
       if (await file.exists()) {
-        // For TypeScript/JSX files, we need to transpile them
-        if (filePath.endsWith(".tsx") || filePath.endsWith(".ts")) {
-          try {
-            const transpiled = await Bun.build({
-              entrypoints: [filePath],
-              target: "browser",
-              format: "esm",
-              splitting: false,
-              minify: false,
-            });
-
-            if (transpiled.success && transpiled.outputs.length > 0) {
-              const output = transpiled.outputs[0];
-              return new Response(output, {
-                headers: {
-                  "Content-Type": "application/javascript",
-                },
-              });
-            }
-          } catch (error) {
-            console.error("Transpilation error:", error);
-            return new Response("Transpilation failed", { status: 500 });
-          }
+        // Determine content type based on file extension
+        let contentType = "application/octet-stream";
+        if (distFilePath.endsWith(".js")) {
+          contentType = "application/javascript";
+        } else if (distFilePath.endsWith(".css")) {
+          contentType = "text/css";
         }
 
-        // For other files (CSS, etc.), serve directly
-        return new Response(file);
+        return new Response(file, {
+          headers: {
+            "Content-Type": contentType,
+          },
+        });
       }
       return new Response("File not found", { status: 404 });
     }
@@ -219,26 +237,38 @@ const server = serve({
     if (url.pathname === "/api/user" && method === "GET") {
       const sessionId = url.searchParams.get("session");
       if (!sessionId || !sessions.has(sessionId)) {
-        return new Response("Unauthorized", { status: 401 });
+        return new Response("Unauthorized", {
+          status: 401,
+          headers: setCorsHeaders(req),
+        });
       }
 
       const session = sessions.get(sessionId)!;
       return new Response(JSON.stringify(session), {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...setCorsHeaders(req),
+        },
       });
     }
 
     if (url.pathname === "/api/readings" && method === "GET") {
       const sessionId = url.searchParams.get("session");
       if (!sessionId || !sessions.has(sessionId)) {
-        return new Response("Unauthorized", { status: 401 });
+        return new Response("Unauthorized", {
+          status: 401,
+          headers: setCorsHeaders(req),
+        });
       }
 
       const session = sessions.get(sessionId)!;
       const readings = await getSugarReadings(session.userId);
 
       return new Response(JSON.stringify(readings), {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...setCorsHeaders(req),
+        },
       });
     }
 
@@ -259,14 +289,23 @@ const server = serve({
               user: { userId: user.id, username: user.username },
             }),
             {
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                ...setCorsHeaders(req),
+              },
             }
           );
         }
 
-        return new Response("Invalid credentials", { status: 401 });
+        return new Response("Invalid credentials", {
+          status: 401,
+          headers: setCorsHeaders(req),
+        });
       } catch (error) {
-        return new Response("Invalid request body", { status: 400 });
+        return new Response("Invalid request body", {
+          status: 400,
+          headers: setCorsHeaders(req),
+        });
       }
     }
 
@@ -283,7 +322,10 @@ const server = serve({
 
         const existingUser = await getUserByUsername(userData.username);
         if (existingUser) {
-          return new Response("Username already exists", { status: 400 });
+          return new Response("Username already exists", {
+            status: 400,
+            headers: setCorsHeaders(req),
+          });
         }
 
         const newUser = await createUser(userData);
@@ -300,14 +342,23 @@ const server = serve({
               user: { userId: newUser.id, username: newUser.username },
             }),
             {
-              headers: { "Content-Type": "application/json" },
+              headers: {
+                "Content-Type": "application/json",
+                ...setCorsHeaders(req),
+              },
             }
           );
         }
 
-        return new Response("Failed to create account", { status: 500 });
+        return new Response("Failed to create account", {
+          status: 500,
+          headers: setCorsHeaders(req),
+        });
       } catch (error) {
-        return new Response("Invalid request body", { status: 400 });
+        return new Response("Invalid request body", {
+          status: 400,
+          headers: setCorsHeaders(req),
+        });
       }
     }
 
@@ -317,7 +368,10 @@ const server = serve({
         const sessionId = body.session;
 
         if (!sessionId || !sessions.has(sessionId)) {
-          return new Response("Unauthorized", { status: 401 });
+          return new Response("Unauthorized", {
+            status: 401,
+            headers: setCorsHeaders(req),
+          });
         }
 
         const session = sessions.get(sessionId)!;
@@ -331,13 +385,22 @@ const server = serve({
         const success = await addSugarReading(session.userId, reading);
         if (success) {
           return new Response(JSON.stringify({ success: true }), {
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              ...setCorsHeaders(req),
+            },
           });
         }
 
-        return new Response("Failed to add reading", { status: 500 });
+        return new Response("Failed to add reading", {
+          status: 500,
+          headers: setCorsHeaders(req),
+        });
       } catch (error) {
-        return new Response("Invalid request body", { status: 400 });
+        return new Response("Invalid request body", {
+          status: 400,
+          headers: setCorsHeaders(req),
+        });
       }
     }
 
@@ -347,7 +410,10 @@ const server = serve({
         sessions.delete(sessionId);
       }
       return new Response(JSON.stringify({ success: true }), {
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...setCorsHeaders(req),
+        },
       });
     }
 
@@ -364,8 +430,9 @@ const server = serve({
       });
     }
 
-    return new Response("Not found", { status: 404 });
+    return new Response("Not found", {
+      status: 404,
+      headers: setCorsHeaders(req),
+    });
   },
 });
-
-console.log(`Server running at http://localhost:${server.port}`);
