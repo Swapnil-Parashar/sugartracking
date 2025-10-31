@@ -740,6 +740,72 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
             )}
           </div>
         </div>
+
+        {/* History Table */}
+        <div className="dashboard-card">
+          <h2
+            style={{
+              color: "#333",
+              fontSize: "1.2rem",
+              marginBottom: "1rem",
+            }}
+          >
+            Reading History
+          </h2>
+          {filteredReadings.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                color: "#666",
+                padding: "2rem",
+              }}
+            >
+              {readings.length === 0
+                ? "No readings yet. Add your first reading!"
+                : `No readings found for the selected time period.`}
+            </div>
+          ) : (
+            <div className="dashboard-table-container">
+              <table className="dashboard-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Type</th>
+                    <th>Value (mg/dL)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredReadings
+                    .sort((a, b) => {
+                      const dateA = new Date(a.date + "T" + (a.time || "00:00"));
+                      const dateB = new Date(b.date + "T" + (b.time || "00:00"));
+                      return dateB.getTime() - dateA.getTime(); // Newest first
+                    })
+                    .map((reading, index) => {
+                      const readingTime = reading.time || getDefaultTimeForType(reading.type);
+                      return (
+                        <tr key={index}>
+                          <td>{reading.date}</td>
+                          <td>{readingTime}</td>
+                          <td>
+                            <span
+                              className={`dashboard-type-badge dashboard-type-badge-${reading.type}`}
+                            >
+                              {reading.type}
+                            </span>
+                          </td>
+                          <td className="dashboard-table-value">
+                            {reading.value} mg/dL
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -318,3 +318,106 @@
         font-size: 0.8rem;
     }
 }
+
+/* Table Styles */
+.dashboard-table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.dashboard-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.dashboard-table th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dashboard-table tbody tr {
+    border-bottom: 1px solid #e1e5e9;
+    transition: background-color 0.2s ease;
+}
+
+.dashboard-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.dashboard-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.dashboard-table td {
+    padding: 1rem;
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.dashboard-table-value {
+    font-weight: 600;
+    color: #667eea;
+}
+
+.dashboard-type-badge {
+    display: inline-block;
+    padding: 0.35rem 0.7rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dashboard-type-badge-fasting {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.dashboard-type-badge-evening {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.dashboard-type-badge-night {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+/* Mobile Table Styles */
+@media (max-width: 767px) {
+    .dashboard-table-container {
+        margin-top: 0.5rem;
+    }
+
+    .dashboard-table th {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .dashboard-table td {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.85rem;
+    }
+
+    .dashboard-type-badge {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.7rem;
+    }
+
+    .dashboard-table-value {
+        font-size: 0.9rem;
+    }
+}
